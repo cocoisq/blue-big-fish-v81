@@ -1,0 +1,58 @@
+
+name: Build Blue Big Fish V81 APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'V81-part-00'
+      - 'V81-part-01'
+      - 'V81-part-02'
+      - 'V81-part-03'
+      - 'V81-part-04'
+      - '.github/workflows/build-apk-v81.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Reassemble V81 ZIP
+        run: |
+          cat V81-part-00 V81-part-01 V81-part-02 V81-part-03 V81-part-04 > V81.zip
+          unzip -tq V81.zip
+
+      - name: Extract Android project
+        run: |
+          unzip -q V81.zip -d source
+          test -f source/TapMaidWidget_Release/settings.gradle.kts
+          test -f source/TapMaidWidget_Release/app/src/main/assets/rhythm_music_4.mp3
+
+      - name: Build APK
+        working-directory: source/TapMaidWidget_Release
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: blue-big-fish-v81-apk
+          path: source/TapMaidWidget_Release/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
